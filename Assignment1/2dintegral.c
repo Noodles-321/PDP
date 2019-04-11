@@ -67,9 +67,9 @@ int main(int argc, char *argv[])
 
   if (rank == MASTER)
   {
-    printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+    // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
     const char *output_file_name = "A1output";
-    FILE *fp = fopen(output_file_name, "w");
+    FILE *fp = fopen(output_file_name, "a");
     // if (fp == NULL)
     // {
     //   perror("Open file failed!");
@@ -81,6 +81,7 @@ int main(int argc, char *argv[])
     //   perror("Close file failed!");
     //   exit(1);
     // }
+    fclose(fp);
   }
 
   MPI_Finalize(); /* Shut down and clean up MPI */
