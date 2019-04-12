@@ -11,4 +11,3 @@ FuckWorld
 
 - [ ] Plot speedup and **the shit above**
 - [ ] Report
-

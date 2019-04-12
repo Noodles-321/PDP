@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
 
   MPI_Comm_size(MPI_COMM_WORLD, &size); /* Get the number of processors */
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* Get my number                */
-  t_begin = MPI_Wtime();
 
   chunk = intervals / size;   /* Number of intervals per processor */
   istart = rank * chunk + 1;  /* Calculate start and stop indices  */
@@ -44,6 +43,9 @@ int main(int argc, char *argv[])
   dy = 2.0 / intervals;
   xsum = 0.0;
   ysum = 0.0;
+
+  t_begin = MPI_Wtime();
+  
   for (i = istart; i <= istop; i++)
   { /* The inner loop */
     double x = dx * (i - 1.0);
