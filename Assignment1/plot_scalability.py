@@ -3,11 +3,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 #%%
-file1 = 'A1output_thread'
+file1 = 'A1output'
 #time_serial = 6.823
 #cal_per = 0.885
 
-speedup_theo = list(range(1,33))
+speedup_theo = [1 for i in list(range(1,33))]
 
 with open(file1, 'r') as f:
     ptime = [float(line.split()[2]) for line in f.readlines()[:32]]
@@ -37,9 +37,9 @@ plt.plot(list(range(1,33)), speedup, '.-', label='Measured')
 
 plt.xlabel('Number of processors', fontsize=12)
 plt.ylabel('Speedup', fontsize=12)
-plt.title('Speedup Performance (fixed problem size)', fontsize=16)
+plt.title('Scalability Performance (scaled problem size)', fontsize=16)
 plt.legend()  # auto-legend with labels above.
-plt.savefig('speedup.png')
+plt.savefig('scalability.png')
 plt.show()
 
 #%%

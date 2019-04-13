@@ -9,11 +9,11 @@ FuckWorld
 
   > Study the parallel performance and the scalability of your implementation, considering both fixed problem size and scaled problem size scalability.
 
-- [ ] Plot  **the shit above**
+- [x] Plot  **the shit above**
 
 - Report
 
-  - [ ] Solution: 
+  - [x] Solution: 
 
     Task:
 
@@ -23,6 +23,6 @@ FuckWorld
 
     >Given p processes, we slice the sum into p pieces, attach one interval to each of them to compute a partial sum, and then collect the local sums into one process.
 
-  - [ ] Scalability testing method
+  - [x] Scalability testing method
 
-  - [ ] Discussion
+  - [x] Discussion
