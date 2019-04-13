@@ -5,7 +5,7 @@ FuckWorld
 
 ## TODO
 
-- [ ] WTF is this??? 
+- [x] WTF is this??? 
 
   > Study the parallel performance and the scalability of your implementation, considering both fixed problem size and scaled problem size scalability.
 
