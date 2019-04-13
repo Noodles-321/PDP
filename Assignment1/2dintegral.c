@@ -57,8 +57,6 @@ int main(int argc, char *argv[])
 
   for (i = istart; i <= istop; i++)
   { /* The outer loop */
-    // double x = dx * (i - 0.5);
-    // double y = dy * (i - 0.5);
     ysum += dy * xglobsum;
   }
   MPI_Reduce(&ysum, &yglobsum, 1, MPI_DOUBLE, MPI_SUM, MASTER, MPI_COMM_WORLD);
@@ -69,7 +67,7 @@ int main(int argc, char *argv[])
 
   if (rank == MASTER)
   {
-    printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+    // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
     const char *output_file_name = "A1output";
     FILE *fp = fopen(output_file_name, "a");
     // if (fp == NULL)
@@ -77,7 +75,7 @@ int main(int argc, char *argv[])
     //   perror("Open file failed!");
     //   exit(1);
     // }
-    // fprintf(fp, "%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+    fprintf(fp, "%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
     // if (fclose(fp) != 0)
     // {
     //   perror("Close file failed!");
