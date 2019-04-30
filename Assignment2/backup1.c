@@ -83,25 +83,30 @@ int main(int argc, char *argv[])
 
   quick_sort(data, istart, istop);
   //printf("qs end\n");
-  MPI_Comm group_comm[8];
+  //MPI_Comm group_comm[8];
   int group_rank, group_size;
   int cnt = 0;
-  MPI_Comm laste_comm = MPI_COMM_WORLD;
+  MPI_Comm group_comm = MPI_COMM_WORLD;
   group_rank = rank;
   group_size = size;
   while(group_size > 1){
-    int color = group_rank % 2;
-    MPI_split(last_comm, color, rank, &group_comm[cnt]);
-    MPI_Comm_rank(group_comm, &group_rank);
-    MPI_Comm_size(group_comm, &group_size);
     // naive way to choose pivot
     int p;
     if(group_rank == 0)
       p = data[(istop + istart) / 2];
-    MPI_Bcast(&p, 1, MPI_INT, 0, group_comm[cnt]);
-    
-
-
+    MPI_Bcast(&p, 1, MPI_INT, 0, group_comm);
+    int color = group_rank % 2;
+    if(color == 0){
+      MPI_Send();
+      MPI_Recv();
+    }
+    if(color == 1){
+      MPI_Recv();
+      MPI_Send();
+    }
+    MPI_split(last_comm, color, rank, &group_comm);
+    MPI_Comm_rank(group_comm, &group_rank);
+    MPI_Comm_size(group_comm, &group_size);
   }
 
   t_end = MPI_Wtime();

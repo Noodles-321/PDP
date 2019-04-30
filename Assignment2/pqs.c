@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
   const int pivot_strategy = atoi(argv[3]);
   int chunk;                             /* This many iterations will I do */
   int istart, istop;                  /* Variables for the local loop   */
-
+  int recur;
   MPI_Init(&argc, &argv); /* Initialize MPI */
 
   MPI_Comm_size(MPI_COMM_WORLD, &size); /* Get the number of processors */
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     data = (int *)malloc(n * sizeof(int));
   }
   MPI_Bcast(data, n, MPI_INT, 0, MPI_COMM_WORLD);
-
+  recur = log_two(n);
   chunk = n / size;   /* Number of numbers per processor */
   istart = rank * chunk;  /* Calculate start and stop indices  */
   istop = (rank + 1) * chunk - 1; /* for the local loop */
@@ -91,8 +91,25 @@ int main(int argc, char *argv[])
 
   quick_sort(data, istart, istop);
   //printf("qs end\n");
+  int p;
+  int group_num;
+  int bias = size / 2;
+  int root_tmp;  
+  while(recur > 0){
     
-
+    if(rank < bias)
+      group_num = 0;
+    else
+      group_num = 1;
+    if(group_num == 0){
+      // p = select
+      if(rank % (bias*2) == 0){
+         p = data[(istart + istop) / 2];
+         root_tmp = rank;
+      }
+      MPI_Bcast(p, 1, MPI_INT, root_tmp, MPI_COMM_WORLD)
+     
+  }
 
 
   t_end = MPI_Wtime();
