@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
       MPI_Recv();
       MPI_Send();
     }
-    MPI_split(last_comm, color, rank, &group_comm);
+    MPI_split(last_comm, color, group_rank, &group_comm);
     MPI_Comm_rank(group_comm, &group_rank);
     MPI_Comm_size(group_comm, &group_size);
     last_comm = group_comm;
