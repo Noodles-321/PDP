@@ -1,0 +1,237 @@
+#include <mpi.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+#include <string.h>
+#define MASTER 0 /* task ID of master task */
+
+int partion(int R[], int start, int end)
+{
+    int r = R[start];
+    while (start < end)
+    {
+        while ((R[end] > r) && (start < end))
+            end--;
+        R[start] = R[end];
+        while ((R[start] < r) && (start < end))
+            start++;
+        R[end] = R[start];
+    }
+    R[start] = r;
+    return start;
+}
+
+void quick_sort(int R[], int start, int end)
+{
+    int r;
+    if (start < end)
+    {
+        r = partion(R, start, end);
+        quick_sort(R, start, r - 1);
+        quick_sort(R, r + 1, end);
+    }
+}
+
+void merge_arrays(int arr1[], int n1, int arr2[], int n2, int arr3[])
+{
+    int i = 0, j = 0, k = 0;
+
+    // Traverse both array
+    while (i < n1 && j < n2)
+    {
+        // Check if current element of first
+        // array is smaller than current element
+        // of second array. If yes, store first
+        // array element and increment first array
+        // index. Otherwise do same with second array
+        if (arr1[i] < arr2[j])
+            arr3[k++] = arr1[i++];
+        else
+            arr3[k++] = arr2[j++];
+    }
+
+    // Store remaining elements of first array
+    while (i < n1)
+        arr3[k++] = arr1[i++];
+
+    // Store remaining elements of second array
+    while (j < n2)
+        arr3[k++] = arr2[j++];
+}
+
+int main(int argc, char const *argv[])
+{
+    if (argc != 4)
+    {
+        printf("Give 3 arguments: input_file_name, output_file_name, pivot_strategy_number(1-3):\n");
+        return 0;
+    }
+
+    char *input_file_name = argv[1];
+    char *output_file_name = argv[2];
+    int pivot_strategy = atoi(argv[3]);
+
+    int rank, size, rcode;
+    int n;
+    int *data;
+    int chunk;            /* This many iterations will I do */
+    int i, istart, istop; /* Variables for the local loop   */
+    double t_begin, t_end; //, time, t_total;
+
+    MPI_Init(&argc, &argv); /* Initialize MPI */
+
+    MPI_Comm_size(MPI_COMM_WORLD, &size); /* Get the number of processors */
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* Get my number                */
+
+    // Read data from file
+    // read in process 0
+    if (rank == MASTER)
+    {
+        FILE *f;
+        f = fopen(input_file_name, "r");
+        if (f == NULL)
+        {
+            printf("File Error\n");
+            exit(1);
+        }
+        fscanf(f, "%d", &n);
+        //printf("%d\n", n);
+        data = (int *)malloc(n * sizeof(int));
+        for (int i = 0; i < n; i++)
+        {
+            fscanf(f, "%d", &data[i]);
+            //printf("%d\n", data[i]);
+        }
+        fclose(f);
+    }
+    // broadcast to other processes
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    if (rank != MASTER)
+    {
+        data = (int *)malloc(n * sizeof(int));
+    }
+    MPI_Bcast(data, n, MPI_INT, 0, MPI_COMM_WORLD);
+
+    chunk = n / size;   /* Number of numbers per processor */
+    istart = rank * chunk;  /* Calculate start and stop indices  */
+    istop = (rank + 1) * chunk - 1; /* for the local loop                */
+    if (rank == size - 1)
+        istop = n - 1; /* Make sure the last processor computes until the end    */
+
+    t_begin = MPI_Wtime();
+
+    quick_sort(data, istart, istop);
+    //printf("qs end\n");
+    //MPI_Comm group_comm[8];
+    int group_rank, group_size;
+    MPI_Comm group_comm;
+    MPI_Comm last_comm = MPI_COMM_WORLD;
+    group_rank = rank;
+    group_size = size;
+
+    // 新建局部数组
+    int local_size = istop - istart + 1;
+    int *local_array = (int *)malloc(local_size * sizeof(int));
+
+    while (group_size > 1)
+    {
+        // naive way to choose pivot
+        int p;
+        if (group_rank == 0)
+            p = local_array[local_size / 2];
+        MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+
+        // find the spliting position
+        int ip = local_size / 2;
+        while (p < local_array[ip])
+            ip--;
+        while (p > local_array[ip])
+            ip++;
+        // ip is the index of the first number in each process larger than the pivot
+
+        int color = group_rank % 2;
+        if (color == 0)
+        {
+            int size_s = local_size - ip;
+            int size_k = ip;
+            int size_r;
+            // MPI_Send(buf, count, datatype, dest, tag, comm)
+            MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
+            int *received = (int *)malloc(size_r * sizeof(int));
+            // send out the right large part, keep the left small part
+            MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
+            // MPI_Recv(buf, count, datatype, source, tag, comm, status)
+            // receive the small part
+            MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
+            int *kept = (int *)malloc(size_k * sizeof(int));
+            memcpy(kept, local_array, size_k * sizeof(int));
+        }
+        if (color == 1)
+        {
+            int size_s = ip;
+            int size_k = local_size - ip;
+            int size_r;
+            // MPI_Send(buf, count, datatype, dest, tag, comm)
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
+            MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
+            int *received = (int *)malloc(size_r * sizeof(int));
+            // receive the large part
+            MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
+            // send out the left small part, keep the right large part
+            MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
+            int *kept = (int *)malloc(size_k * sizeof(int));
+            memcpy(kept, local_array + ip, size_k * sizeof(int));
+        }
+
+        // 更新局部数组
+        free(local_array);
+        int *local_array = (int *)malloc((size_k + size_r) * sizeof(int));
+        merge_arrays(kept, size_k, received, size_r, local_array);
+
+        free(received);
+        free(kept);
+
+        MPI_split(last_comm, color, group_rank, &group_comm);
+        MPI_Comm_rank(group_comm, &group_rank);
+        MPI_Comm_size(group_comm, &group_size);
+        last_comm = group_comm;
+    }
+
+    // 数组拼接，覆盖data
+    
+
+    t_end = MPI_Wtime();
+
+    // result checking
+    for (int i = 0; i < n - 1; i++)
+    {
+        if (data[i] > data[i + 1])
+        {
+            printf("Wrong!\n");
+            break;
+        }
+    }
+
+    // Write data to file
+    if (rank == MASTER)
+    {
+        printf("%.2f", t_end - t_begin);
+        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+        FILE *fp = fopen(output_file_name, "a");
+        if (fp == NULL)
+        {
+            printf("File Error\n");
+            exit(1);
+        }
+        for (int i = 0; i < n; i++)
+            fprintf(fp, "%d  ", data[i]);
+        fclose(fp);
+    }
+
+    free(local_array);
+    free(data);
+    MPI_Finalize(); /* Shut down and clean up MPI */
+
+    return 0;
+}
