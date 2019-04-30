@@ -86,7 +86,8 @@ int main(int argc, char *argv[])
   //MPI_Comm group_comm[8];
   int group_rank, group_size;
   int cnt = 0;
-  MPI_Comm group_comm = MPI_COMM_WORLD;
+  MPI_Comm group_comm;
+  MPI_Comm last_comm = MPI_COMM_WORLD;
   group_rank = rank;
   group_size = size;
   while(group_size > 1){
@@ -94,7 +95,7 @@ int main(int argc, char *argv[])
     int p;
     if(group_rank == 0)
       p = data[(istop + istart) / 2];
-    MPI_Bcast(&p, 1, MPI_INT, 0, group_comm);
+    MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
     int color = group_rank % 2;
     if(color == 0){
       MPI_Send();
@@ -107,6 +108,7 @@ int main(int argc, char *argv[])
     MPI_split(last_comm, color, rank, &group_comm);
     MPI_Comm_rank(group_comm, &group_rank);
     MPI_Comm_size(group_comm, &group_size);
+    last_comm = group_comm;
   }
 
   t_end = MPI_Wtime();
