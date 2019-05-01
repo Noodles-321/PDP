@@ -1,4 +1,4 @@
-#include <mpi.h>
+// #include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -74,9 +74,10 @@ int main(int argc, char const *argv[])
     int rank, size, rcode;
     int n;
     int *data;
-    int chunk;            /* This many iterations will I do */
-    int i, istart, istop; /* Variables for the local loop   */
+    int chunk;             /* This many iterations will I do */
+    int i, istart, istop;  /* Variables for the local loop   */
     double t_begin, t_end; //, time, t_total;
+    MPI_Status status;
 
     MPI_Init(&argc, &argv); /* Initialize MPI */
 
@@ -112,8 +113,8 @@ int main(int argc, char const *argv[])
     }
     MPI_Bcast(data, n, MPI_INT, 0, MPI_COMM_WORLD);
 
-    chunk = n / size;   /* Number of numbers per processor */
-    istart = rank * chunk;  /* Calculate start and stop indices  */
+    chunk = n / size;               /* Number of numbers per processor */
+    istart = rank * chunk;          /* Calculate start and stop indices  */
     istop = (rank + 1) * chunk - 1; /* for the local loop                */
     if (rank == size - 1)
         istop = n - 1; /* Make sure the last processor computes until the end    */
@@ -157,13 +158,13 @@ int main(int argc, char const *argv[])
             int size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD, &status);
             int *received = (int *)malloc(size_r * sizeof(int));
             // send out the right large part, keep the left small part
             MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             // receive the small part
-            MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
+            MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD, &status);
             int *kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array, size_k * sizeof(int));
         }
@@ -173,11 +174,12 @@ int main(int argc, char const *argv[])
             int size_k = local_size - ip;
             int size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
             MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
             int *received = (int *)malloc(size_r * sizeof(int));
             // receive the large part
-            MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
+            // MPI_Recv(buf, count, datatype, source, tag, comm, status)
+            MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD, &status);
             // send out the left small part, keep the right large part
             MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
             int *kept = (int *)malloc(size_k * sizeof(int));
@@ -186,7 +188,8 @@ int main(int argc, char const *argv[])
 
         // 更新局部数组
         free(local_array);
-        int *local_array = (int *)malloc((size_k + size_r) * sizeof(int));
+        int size_l = size_k + size_r; // local array size
+        int *local_array = (int *)malloc(size_l * sizeof(int));
         merge_arrays(kept, size_k, received, size_r, local_array);
 
         free(received);
@@ -199,7 +202,28 @@ int main(int argc, char const *argv[])
     }
 
     // 数组拼接，覆盖data
-    
+    if (rank != MASTER)
+    {
+        MPI_Send(&size_l, 1, MPI_INT, MASTER, rank * 100, MPI_COMM_WORLD);
+        MPI_Send(local_array, size_l, MPI_INT, MASTER, rank, MPI_COMM_WORLD);
+    }
+    else
+    {
+        free(data);
+        int *data = (int *)malloc(n * sizeof(int));
+        memcpy(data, local_array, size_l * sizeof(int));
+
+        int *local_array_sizes = (int *)malloc(size * sizeof(int));
+        int cum_size = size_l;
+
+        for (int i = 1; i < size; i++)
+        {
+            MPI_Recv(local_array_sizes + i, 1, MPI_INT, i, rank * 100, MPI_COMM_WORLD, &status);
+            MPI_Recv(data + size_l, local_array_sizes[i], MPI_INT, i, rank, MPI_COMM_WORLD, &status);
+            size_l += local_array_sizes[i];
+        }
+        free(local_array_sizes);
+    }
 
     t_end = MPI_Wtime();
 

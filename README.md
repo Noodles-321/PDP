@@ -1,6 +1,6 @@
 # A2 TODO
 
-- [ ] 数组拼接
+- [x] 数组拼接
 - [ ] pivot selection
 - [ ] 测试
 - [ ] 报告
