@@ -1,4 +1,4 @@
-// #include <mpi.h>
+#include <mpi.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -59,7 +59,7 @@ void merge_arrays(int arr1[], int n1, int arr2[], int n2, int arr3[])
         arr3[k++] = arr2[j++];
 }
 
-int main(int argc, char const *argv[])
+int main(int argc, char *argv[])
 {
     if (argc != 4)
     {
@@ -77,9 +77,10 @@ int main(int argc, char const *argv[])
     int chunk;             /* This many iterations will I do */
     int i, istart, istop;  /* Variables for the local loop   */
     double t_begin, t_end; //, time, t_total;
-    MPI_Status status;
+    // MPI_Status status;
 
     MPI_Init(&argc, &argv); /* Initialize MPI */
+    MPI_Status status;
 
     MPI_Comm_size(MPI_COMM_WORLD, &size); /* Get the number of processors */
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* Get my number                */
@@ -134,6 +135,8 @@ int main(int argc, char const *argv[])
     int local_size = istop - istart + 1;
     int *local_array = (int *)malloc(local_size * sizeof(int));
 
+    int size_l;
+
     while (group_size > 1)
     {
         // naive way to choose pivot
@@ -151,51 +154,55 @@ int main(int argc, char const *argv[])
         // ip is the index of the first number in each process larger than the pivot
 
         int color = group_rank % 2;
-        if (color == 0)
+        int size_s, size_k, size_r;
+        int *kept = (int *)malloc(size_k * sizeof(int));
+        int *received = (int *)malloc(size_r * sizeof(int));
+
+        if (color == 0) 
         {
-            int size_s = local_size - ip;
-            int size_k = ip;
-            int size_r;
+            size_s = local_size - ip;
+            size_k = ip;
+            size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
             MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD, &status);
-            int *received = (int *)malloc(size_r * sizeof(int));
+            // int *received = (int *)malloc(size_r * sizeof(int));
             // send out the right large part, keep the left small part
             MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             // receive the small part
             MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD, &status);
-            int *kept = (int *)malloc(size_k * sizeof(int));
+            // int *kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array, size_k * sizeof(int));
         }
         if (color == 1)
         {
-            int size_s = ip;
-            int size_k = local_size - ip;
-            int size_r;
+            size_s = ip;
+            size_k = local_size - ip;
+            size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
             MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
-            int *received = (int *)malloc(size_r * sizeof(int));
+            // int *received = (int *)malloc(size_r * sizeof(int));
             // receive the large part
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD, &status);
             // send out the left small part, keep the right large part
             MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
-            int *kept = (int *)malloc(size_k * sizeof(int));
+            // int *kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array + ip, size_k * sizeof(int));
         }
 
         // 更新局部数组
         free(local_array);
-        int size_l = size_k + size_r; // local array size
+        size_l = size_k + size_r; // local array size
         int *local_array = (int *)malloc(size_l * sizeof(int));
         merge_arrays(kept, size_k, received, size_r, local_array);
 
         free(received);
         free(kept);
 
-        MPI_split(last_comm, color, group_rank, &group_comm);
+        MPI_Comm_split(last_comm, color, group_rank, &group_comm);
         MPI_Comm_rank(group_comm, &group_rank);
         MPI_Comm_size(group_comm, &group_size);
         last_comm = group_comm;
