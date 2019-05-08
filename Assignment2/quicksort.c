@@ -156,41 +156,39 @@ int main(int argc, char *argv[])
 
         int color = group_rank % 2;
         int size_s, size_k, size_r;
-        int *kept = (int *)malloc(size_k * sizeof(int));
-        int *received = (int *)malloc(size_r * sizeof(int));
+        int *kept;
+        int *received;
 
         if (color == 0) 
         {
             size_s = local_size - ip;
             size_k = ip;
-            size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
             MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD, &status);
-            // int *received = (int *)malloc(size_r * sizeof(int));
+            received = (int *)malloc(size_r * sizeof(int));
             // send out the right large part, keep the left small part
             MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             // receive the small part
             MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, MPI_COMM_WORLD, &status);
-            // int *kept = (int *)malloc(size_k * sizeof(int));
+            kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array, size_k * sizeof(int));
         }
         if (color == 1)
         {
             size_s = ip;
             size_k = local_size - ip;
-            size_r;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
             MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
-            // int *received = (int *)malloc(size_r * sizeof(int));
+            received = (int *)malloc(size_r * sizeof(int));
             // receive the large part
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD, &status);
             // send out the left small part, keep the right large part
             MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, MPI_COMM_WORLD);
-            // int *kept = (int *)malloc(size_k * sizeof(int));
+            kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array + ip, size_k * sizeof(int));
         }
 
@@ -249,7 +247,6 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f", t_end - t_begin);
-        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
