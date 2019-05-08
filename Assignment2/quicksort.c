@@ -133,6 +133,7 @@ int main(int argc, char const *argv[])
     // 新建局部数组
     int local_size = istop - istart + 1;
     int *local_array = (int *)malloc(local_size * sizeof(int));
+    memcpy(local_array, data + istart, local_size * sizeof(int));
 
     while (group_size > 1)
     {
