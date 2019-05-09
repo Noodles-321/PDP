@@ -149,9 +149,9 @@ int main(int argc, char *argv[])
 
         // find the spliting position
         int ip = size_l / 2;
-        while (p < local_array[ip])
+        while (p < local_array[ip] && ip > 0)
             ip--;
-        while (p > local_array[ip])
+        while (p > local_array[ip] && ip < size_l - 1)
             ip++;
         // ip is the index of the first number in each process larger than the pivot
 
