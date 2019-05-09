@@ -135,16 +135,15 @@ int main(int argc, char *argv[])
     int size_l = istop - istart + 1;
     int *local_array = NULL;
     local_array = (int *)malloc(size_l * sizeof(int));
-    int *local_array_new = NULL; 
+    int *local_array_new = NULL;
     memcpy(local_array, data + istart, size_l * sizeof(int));
-
 
     while (group_size > 1)
     {
+        int p;
         if (pivot_strategy == 1)
         {
             // Select the median in one processor in each group of processors.
-            int p;
             if (group_rank == 0)
                 p = local_array[size_l / 2];
             MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
@@ -152,7 +151,7 @@ int main(int argc, char *argv[])
         else if (pivot_strategy == 2)
         {
             // Select the median of all medians in each processor group.
-            int p = local_array[size_l / 2];
+            p = local_array[size_l / 2];
             if (group_rank != 0)
             {
                 MPI_Send(&p, 1, MPI_INT, 0, 111, last_comm);
@@ -174,7 +173,7 @@ int main(int argc, char *argv[])
         else if (pivot_strategy == 3)
         {
             // Select the mean value of all medians in each processor group.
-            int p = local_array[size_l / 2];
+            p = local_array[size_l / 2];
             if (group_rank != 0)
             {
                 MPI_Send(&p, 1, MPI_INT, 0, 111, last_comm);
@@ -195,9 +194,8 @@ int main(int argc, char *argv[])
                 }
                 p = sum_median / group_size; // mean of medians
                 MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+            }
         }
-        
-        
 
         // find the spliting position
         int ip = size_l / 2;
@@ -249,7 +247,7 @@ int main(int argc, char *argv[])
         // 更新局部数组
         free(local_array);
         size_l = size_k + size_r; // local array size
-        // int *local_array_new; 
+        // int *local_array_new;
         local_array_new = (int *)malloc(size_l * sizeof(int));
         merge_arrays(kept, size_k, received, size_r, local_array_new);
 
@@ -272,12 +270,12 @@ int main(int argc, char *argv[])
     {
         free(data);
         int *data = (int *)malloc(n * sizeof(int));
-        if(size == 1)
-          memcpy(data, local_array, size_l * sizeof(int));
+        if (size == 1)
+            memcpy(data, local_array, size_l * sizeof(int));
         else
-          memcpy(data, local_array_new, size_l * sizeof(int));
-        
-        int *local_array_sizes = NULL; 
+            memcpy(data, local_array_new, size_l * sizeof(int));
+
+        int *local_array_sizes = NULL;
         local_array_sizes = (int *)malloc(size * sizeof(int));
         int cum_size = size_l;
 
@@ -305,7 +303,6 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-
 
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
