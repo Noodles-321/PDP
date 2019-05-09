@@ -141,11 +141,63 @@ int main(int argc, char *argv[])
 
     while (group_size > 1)
     {
-        // naive way to choose pivot
-        int p;
-        if (group_rank == 0)
-            p = local_array[size_l / 2];
-        MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+        if (pivot_strategy == 1)
+        {
+            // Select the median in one processor in each group of processors.
+            int p;
+            if (group_rank == 0)
+                p = local_array[size_l / 2];
+            MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+        }
+        else if (pivot_strategy == 2)
+        {
+            // Select the median of all medians in each processor group.
+            int p = local_array[size_l / 2];
+            if (group_rank != 0)
+            {
+                MPI_Send(&p, 1, MPI_INT, 0, 111, last_comm);
+            }
+            else
+            {
+                int *ps = NULL; // array to store medians
+                ps = (int *)malloc(group_size * sizeof(int));
+                ps[0] = p;
+                for (int i = 1; i < size; i++)
+                {
+                    MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
+                }
+                quick_sort(ps, 0, group_size - 1);
+                p = ps[group_size / 2]; // choose median
+                MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+            }
+        }
+        else if (pivot_strategy == 3)
+        {
+            // Select the mean value of all medians in each processor group.
+            int p = local_array[size_l / 2];
+            if (group_rank != 0)
+            {
+                MPI_Send(&p, 1, MPI_INT, 0, 111, last_comm);
+            }
+            else
+            {
+                int *ps = NULL; // array to store medians
+                ps = (int *)malloc(group_size * sizeof(int));
+                ps[0] = p;
+                for (int i = 1; i < size; i++)
+                {
+                    MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
+                }
+                int sum_median = 0;
+                for (int i = 0; i < group_size; i++)
+                {
+                    sum_median += ps[i];
+                }
+                p = sum_median / group_size; // mean of medians
+                MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+        }
+        
+        
 
         // find the spliting position
         int ip = size_l / 2;
