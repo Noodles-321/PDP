@@ -195,8 +195,8 @@ int main(int argc, char *argv[])
         // 更新局部数组
         free(local_array);
         size_l = size_k + size_r; // local array size
-        int *local_array = (int *)malloc(size_l * sizeof(int));
-        merge_arrays(kept, size_k, received, size_r, local_array);
+        int *local_array_new = (int *)malloc(size_l * sizeof(int));
+        merge_arrays(kept, size_k, received, size_r, local_array_new);
 
         free(received);
         free(kept);
@@ -211,13 +211,13 @@ int main(int argc, char *argv[])
     if (rank != MASTER)
     {
         MPI_Send(&size_l, 1, MPI_INT, MASTER, 999, MPI_COMM_WORLD);
-        MPI_Send(local_array, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
+        MPI_Send(local_array_new, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
     }
     else
     {
         free(data);
         int *data = (int *)malloc(n * sizeof(int));
-        memcpy(data, local_array, size_l * sizeof(int));
+        memcpy(data, local_array_new, size_l * sizeof(int));
 
         int *local_array_sizes = (int *)malloc(size * sizeof(int));
         int cum_size = size_l;
@@ -262,7 +262,7 @@ int main(int argc, char *argv[])
         fclose(fp);
     }
 
-    free(local_array);
+    free(local_array_new);
     free(data);
     MPI_Finalize(); /* Shut down and clean up MPI */
 
