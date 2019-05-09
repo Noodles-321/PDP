@@ -161,8 +161,8 @@ int main(int argc, char *argv[])
 
         if (color == 0)
         {
-            size_s = size_l - ip;
-            size_k = ip;
+            size_s = size_l - ip - 1;
+            size_k = ip + 1;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
             MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD, &status);
@@ -177,8 +177,8 @@ int main(int argc, char *argv[])
         }
         if (color == 1)
         {
-            size_s = ip;
-            size_k = size_l - ip;
+            size_s = ip + 1;
+            size_k = size_l - ip - 1;
 
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
@@ -211,8 +211,8 @@ int main(int argc, char *argv[])
     // 数组拼接，覆盖data
     if (rank != MASTER)
     {
-        MPI_Send(&size_l, 1, MPI_INT, MASTER, rank * 100, MPI_COMM_WORLD);
-        MPI_Send(local_array, size_l, MPI_INT, MASTER, rank, MPI_COMM_WORLD);
+        MPI_Send(&size_l, 1, MPI_INT, MASTER, 999, MPI_COMM_WORLD);
+        MPI_Send(local_array, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
     }
     else
     {
@@ -225,8 +225,8 @@ int main(int argc, char *argv[])
 
         for (int i = 1; i < size; i++)
         {
-            MPI_Recv(local_array_sizes + i, 1, MPI_INT, i, rank * 100, MPI_COMM_WORLD, &status);
-            MPI_Recv(data + size_l, local_array_sizes[i], MPI_INT, i, rank, MPI_COMM_WORLD, &status);
+            MPI_Recv(local_array_sizes + i, 1, MPI_INT, i, 999, MPI_COMM_WORLD, &status);
+            MPI_Recv(data + size_l, local_array_sizes[i], MPI_INT, i, 666, MPI_COMM_WORLD, &status);
             size_l += local_array_sizes[i];
         }
         free(local_array_sizes);
@@ -238,14 +238,6 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f\n", t_end - t_begin);
-
-        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
-        FILE *fp = fopen(output_file_name, "a");
-        if (fp == NULL)
-        {
-            printf("File Error\n");
-            exit(1);
-        }
         for (int i = 0; i < n - 1; i++)
         {
             if (data[i] > data[i + 1])
@@ -253,9 +245,19 @@ int main(int argc, char *argv[])
                 printf("Wrong!\n");
                 break;
             }
+        }
+        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+        FILE *fp = fopen(output_file_name, "a");
+        if (fp == NULL)
+        {
+            printf("File Error\n");
+            exit(1);
+        }
+        for (int i = 0; i < n; i++)
+        {
             fprintf(fp, "%d  ", data[i]);
         }
-        fprintf(fp, "%d\n", data[n - 1]);
+
         fclose(fp);
     }
 
@@ -265,3 +267,4 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+rank
