@@ -136,7 +136,6 @@ int main(int argc, char *argv[])
     int *local_array = (int *)malloc(size_l * sizeof(int));
     memcpy(local_array, data + istart, size_l * sizeof(int));
 
-    // int size_l = n;
 
     while (group_size > 1)
     {
@@ -161,8 +160,8 @@ int main(int argc, char *argv[])
 
         if (color == 0)
         {
-            size_s = size_l - ip - 1;
-            size_k = ip + 1;
+            size_s = size_l - ip;
+            size_k = ip;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
             MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD, &status);
@@ -177,8 +176,8 @@ int main(int argc, char *argv[])
         }
         if (color == 1)
         {
-            size_s = ip + 1;
-            size_k = size_l - ip - 1;
+            size_s = ip;
+            size_k = size_l - ip;
 
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
@@ -238,6 +237,7 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f\n", t_end - t_begin);
+
         for (int i = 0; i < n - 1; i++)
         {
             if (data[i] > data[i + 1])
@@ -246,7 +246,8 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
+
+
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
@@ -267,4 +268,3 @@ int main(int argc, char *argv[])
 
     return 0;
 }
-rank
