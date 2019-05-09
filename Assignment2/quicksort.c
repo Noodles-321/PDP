@@ -220,8 +220,11 @@ int main(int argc, char *argv[])
     {
         free(data);
         int *data = (int *)malloc(n * sizeof(int));
-        memcpy(data, local_array_new, size_l * sizeof(int));
-
+        if(size == 1)
+          memcpy(data, local_array, size_l * sizeof(int));
+        else
+          memcpy(data, local_array_new, size_l * sizeof(int));
+        
         int *local_array_sizes = NULL; 
         local_array_sizes = (int *)malloc(size * sizeof(int));
         int cum_size = size_l;
