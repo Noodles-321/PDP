@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
 
     int rank, size, rcode;
     int n;
-    int *data;
+    int *data = NULL;
     int chunk;             /* This many iterations will I do */
     int i, istart, istop;  /* Variables for the local loop   */
     double t_begin, t_end; //, time, t_total;
@@ -133,8 +133,9 @@ int main(int argc, char *argv[])
 
     // 新建局部数组
     int size_l = istop - istart + 1;
-    int *local_array = (int *)malloc(size_l * sizeof(int));
-    int *local_array_new; 
+    int *local_array = NULL;
+    local_array = (int *)malloc(size_l * sizeof(int));
+    int *local_array_new = NULL; 
     memcpy(local_array, data + istart, size_l * sizeof(int));
 
 
@@ -156,8 +157,8 @@ int main(int argc, char *argv[])
 
         int color = group_rank % 2;
         int size_s, size_k, size_r;
-        int *kept;
-        int *received;
+        int *kept = NULL;
+        int *received = NULL;
 
         if (color == 0)
         {
@@ -221,7 +222,8 @@ int main(int argc, char *argv[])
         int *data = (int *)malloc(n * sizeof(int));
         memcpy(data, local_array_new, size_l * sizeof(int));
 
-        int *local_array_sizes = (int *)malloc(size * sizeof(int));
+        int *local_array_sizes = NULL; 
+        local_array_sizes = (int *)malloc(size * sizeof(int));
         int cum_size = size_l;
 
         for (int i = 1; i < size; i++)
