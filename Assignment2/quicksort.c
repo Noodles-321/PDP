@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
     int *local_array = (int *)malloc(local_size * sizeof(int));
     memcpy(local_array, data + istart, local_size * sizeof(int));
 
-    int size_l;
+    int size_l = n;
 
     while (group_size > 1)
     {
@@ -159,7 +159,7 @@ int main(int argc, char *argv[])
         int *kept;
         int *received;
 
-        if (color == 0) 
+        if (color == 0)
         {
             size_s = local_size - ip;
             size_k = ip;
@@ -179,6 +179,7 @@ int main(int argc, char *argv[])
         {
             size_s = ip;
             size_k = local_size - ip;
+
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
             MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD);
@@ -233,28 +234,28 @@ int main(int argc, char *argv[])
 
     t_end = MPI_Wtime();
 
-    // result checking
-    for (int i = 0; i < n - 1; i++)
-    {
-        if (data[i] > data[i + 1])
-        {
-            printf("Wrong!\n");
-            break;
-        }
-    }
-
     // Write data to file
     if (rank == MASTER)
     {
-        printf("%.2f", t_end - t_begin);
+        printf("%.2f\n", t_end - t_begin);
+
+        // printf("%ld\t%.6f\t%.6f\n", intervals, yglobsum, t_end - t_begin);
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
             printf("File Error\n");
             exit(1);
         }
-        for (int i = 0; i < n; i++)
+        for (int i = 0; i < n - 1; i++)
+        {
+            if (data[i] > data[i + 1])
+            {
+                printf("Wrong!\n");
+                break;
+            }
             fprintf(fp, "%d  ", data[i]);
+        }
+        fprintf(fp, "%d\n", data[n - 1]);
         fclose(fp);
     }
 
