@@ -132,22 +132,22 @@ int main(int argc, char *argv[])
     group_size = size;
 
     // 新建局部数组
-    int local_size = istop - istart + 1;
-    int *local_array = (int *)malloc(local_size * sizeof(int));
-    memcpy(local_array, data + istart, local_size * sizeof(int));
+    int size_l = istop - istart + 1;
+    int *local_array = (int *)malloc(size_l * sizeof(int));
+    memcpy(local_array, data + istart, size_l * sizeof(int));
 
-    int size_l = n;
+    // int size_l = n;
 
     while (group_size > 1)
     {
         // naive way to choose pivot
         int p;
         if (group_rank == 0)
-            p = local_array[local_size / 2];
+            p = local_array[size_l / 2];
         MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
 
         // find the spliting position
-        int ip = local_size / 2;
+        int ip = size_l / 2;
         while (p < local_array[ip])
             ip--;
         while (p > local_array[ip])
@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
 
         if (color == 0)
         {
-            size_s = local_size - ip;
+            size_s = size_l - ip;
             size_k = ip;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, MPI_COMM_WORLD);
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
         if (color == 1)
         {
             size_s = ip;
-            size_k = local_size - ip;
+            size_k = size_l - ip;
 
             // MPI_Send(buf, count, datatype, dest, tag, comm)
             MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, MPI_COMM_WORLD, &status);
