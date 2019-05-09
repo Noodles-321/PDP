@@ -134,6 +134,7 @@ int main(int argc, char *argv[])
     // 新建局部数组
     int size_l = istop - istart + 1;
     int *local_array = (int *)malloc(size_l * sizeof(int));
+    int *local_array_new; 
     memcpy(local_array, data + istart, size_l * sizeof(int));
 
 
@@ -195,7 +196,8 @@ int main(int argc, char *argv[])
         // 更新局部数组
         free(local_array);
         size_l = size_k + size_r; // local array size
-        int *local_array_new = (int *)malloc(size_l * sizeof(int));
+        // int *local_array_new; 
+        local_array_new = (int *)malloc(size_l * sizeof(int));
         merge_arrays(kept, size_k, received, size_r, local_array_new);
 
         free(received);
