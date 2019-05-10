@@ -186,7 +186,7 @@ int main(int argc, char *argv[])
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
-                int sum_median = 0;
+                unsigned long int sum_median = 0;
                 for (int i = 0; i < group_size; i++)
                 {
                     sum_median += ps[i];
