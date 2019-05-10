@@ -201,7 +201,7 @@ int main(int argc, char *argv[])
         int ip = size_l / 2;
         while (p < local_array[ip] && ip > 0)
             ip--;
-        while (p > local_array[ip] && ip < size_l)
+        while (p > local_array[ip] && ip < size_l - 1)
             ip++;
         // ip is the index of the first number in each process larger than the pivot
 
@@ -258,12 +258,8 @@ int main(int argc, char *argv[])
         MPI_Comm_rank(group_comm, &group_rank);
         MPI_Comm_size(group_comm, &group_size);
         last_comm = group_comm;
-        MPI_Barrier(MPI_COMM_WORLD);
     }
 
-    // wait all 
-    MPI_Barrier(MPI_COMM_WORLD);
-   
     // 数组拼接，覆盖data
     if (rank != MASTER)
     {
