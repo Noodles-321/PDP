@@ -4,19 +4,7 @@
 #include <math.h>
 #include <string.h>
 #define MASTER 0 /* task ID of master task */
-int log_base2(int x){
-    int res = 0;
-    while(x > 1){
-      x /= 2;
-      res++;
-    }
-    return res;
-}
 
-void array_copy(int ori[], int aim[], int size){
-    for(int i = 0; i < size; i++)
-       aim[i] = ori[i];
-}
 int partion(int R[], int start, int end)
 {
     int r = R[start];
@@ -147,7 +135,6 @@ int main(int argc, char *argv[])
     int size_l = istop - istart + 1;
     int *local_array = NULL;
     local_array = (int *)malloc(size_l * sizeof(int));
-    int *local_array_new = NULL;
     memcpy(local_array, data + istart, size_l * sizeof(int));
 
     while (group_size > 1)
