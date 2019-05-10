@@ -32,6 +32,12 @@ void quick_sort(int R[], int start, int end)
     }
 }
 
+int cmpfunc (const void * a, const void * b)
+{
+   return ( *(int*)a - *(int*)b );
+}
+
+
 void merge_arrays(int arr1[], int n1, int arr2[], int n2, int arr3[])
 {
     int i = 0, j = 0, k = 0;
@@ -122,7 +128,7 @@ int main(int argc, char *argv[])
 
     t_begin = MPI_Wtime();
 
-    quick_sort(data, istart, istop);
+    
     //printf("qs end\n");
     //MPI_Comm group_comm[8];
     int group_rank, group_size;
@@ -136,6 +142,8 @@ int main(int argc, char *argv[])
     int *local_array = NULL;
     local_array = (int *)malloc(size_l * sizeof(int));
     memcpy(local_array, data + istart, size_l * sizeof(int));
+
+    qsort(local_array, size_l, sizeof(int), cmpfunc);
 
     while (group_size > 1)
     {
@@ -257,11 +265,7 @@ int main(int argc, char *argv[])
         MPI_Comm_rank(group_comm, &group_rank);
         MPI_Comm_size(group_comm, &group_size);
         last_comm = group_comm;
-        MPI_Barrier(MPI_COMM_WORLD);
     }
-
-    // wait all 
-    MPI_Barrier(MPI_COMM_WORLD);
    
     // 数组拼接，覆盖data
     if (rank != MASTER)
