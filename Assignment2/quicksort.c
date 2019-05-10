@@ -5,6 +5,11 @@
 #include <string.h>
 #define MASTER 0 /* task ID of master task */
 
+int cmpfunc (const void * a, const void * b)
+{
+   return ( *(int*)a - *(int*)b );
+}
+
 int partion(int R[], int start, int end)
 {
     int r = R[start];
@@ -32,12 +37,6 @@ void quick_sort(int R[], int start, int end)
     }
 }
 
-int cmpfunc (const void * a, const void * b)
-{
-   return ( *(int*)a - *(int*)b );
-}
-
-
 void merge_arrays(int arr1[], int n1, int arr2[], int n2, int arr3[])
 {
     int i = 0, j = 0, k = 0;
@@ -64,6 +63,7 @@ void merge_arrays(int arr1[], int n1, int arr2[], int n2, int arr3[])
     while (j < n2)
         arr3[k++] = arr2[j++];
 }
+
 
 int main(int argc, char *argv[])
 {
@@ -128,16 +128,13 @@ int main(int argc, char *argv[])
 
     t_begin = MPI_Wtime();
 
-    
-    //printf("qs end\n");
-    //MPI_Comm group_comm[8];
     int group_rank, group_size;
     MPI_Comm group_comm;
     MPI_Comm last_comm = MPI_COMM_WORLD;
     group_rank = rank;
     group_size = size;
 
-    // 新建局部数组
+    // new local array
     int size_l = istop - istart + 1;
     int *local_array = NULL;
     local_array = (int *)malloc(size_l * sizeof(int));
@@ -153,7 +150,6 @@ int main(int argc, char *argv[])
             // Select the median in one processor in each group of processors.
             if (group_rank == 0)
                 p = local_array[size_l / 2];
-            MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
         }
         else if (pivot_strategy == 2)
         {
@@ -172,10 +168,10 @@ int main(int argc, char *argv[])
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
-                quick_sort(ps, 0, group_size - 1);
+                // quick_sort(ps, 0, group_size - 1);
+                qsort(ps, group_size, sizeof(int), cmpfunc );
                 p = ps[group_size / 2]; // choose median
-                MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
-            }
+            }          
         }
         else if (pivot_strategy == 3)
         {
@@ -200,10 +196,11 @@ int main(int argc, char *argv[])
                     sum_median += ps[i];
                 }
                 p = sum_median / group_size; // mean of medians
-                MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
             }
         }
-
+        
+        MPI_Bcast(&p, 1, MPI_INT, 0, last_comm);
+        
         // find the spliting position
         int ip = size_l / 2;
         while (p < local_array[ip] && ip > 0)
@@ -251,7 +248,7 @@ int main(int argc, char *argv[])
             memcpy(kept, local_array + ip, size_k * sizeof(int));
         }
 
-        // 更新局部数组
+        // update local array
         free(local_array);
         size_l = size_k + size_r; // local array size
         local_array = NULL;
@@ -267,7 +264,7 @@ int main(int argc, char *argv[])
         last_comm = group_comm;
     }
    
-    // 数组拼接，覆盖data
+    // merge array into final array "data"
     if (rank != MASTER)
     {
         MPI_Send(&size_l, 1, MPI_INT, MASTER, 999, MPI_COMM_WORLD);
@@ -297,7 +294,7 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f\n", t_end - t_begin);
-        /*
+        
         for (int i = 0; i < n - 1; i++)
         {
             if (data[i] > data[i + 1])
@@ -306,7 +303,7 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-        */
+
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
