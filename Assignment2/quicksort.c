@@ -4,6 +4,14 @@
 #include <math.h>
 #include <string.h>
 #define MASTER 0 /* task ID of master task */
+int log_base2(int x){
+    int res = 0;
+    while(x > 1){
+      x /= 2;
+      res++;
+    }
+    return res;
+}
 
 int partion(int R[], int start, int end)
 {
@@ -204,8 +212,8 @@ int main(int argc, char *argv[])
         while (p > local_array[ip] && ip < size_l)
             ip++;
         // ip is the index of the first number in each process larger than the pivot
-
-        int color = group_rank % 2;
+        int half_size = group_size / 2;
+        int color = group_rank / half_size;
         int size_s, size_k, size_r;
         int *kept = NULL;
         int *received = NULL;
@@ -215,14 +223,14 @@ int main(int argc, char *argv[])
             size_s = size_l - ip;
             size_k = ip;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, last_comm);
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, last_comm, &status);
+            MPI_Send(&size_s, 1, MPI_INT, group_rank + half_size, 0, last_comm);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank + half_size, 0, last_comm, &status);
             received = (int *)malloc(size_r * sizeof(int));
             // send out the right large part, keep the left small part
-            MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, last_comm);
+            MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + half_size, 1, last_comm);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             // receive the small part
-            MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, last_comm, &status);
+            MPI_Recv(received, size_r, MPI_INT, group_rank + half_size, 1, last_comm, &status);
             kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array, size_k * sizeof(int));
         }
@@ -232,14 +240,14 @@ int main(int argc, char *argv[])
             size_k = size_l - ip;
 
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, last_comm, &status);
-            MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, last_comm);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank - half_size, 0, last_comm, &status);
+            MPI_Send(&size_s, 1, MPI_INT, group_rank - half_size, 0, last_comm);
             received = (int *)malloc(size_r * sizeof(int));
             // receive the large part
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
-            MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, last_comm, &status);
+            MPI_Recv(received, size_r, MPI_INT, group_rank - half_size, 1, last_comm, &status);
             // send out the left small part, keep the right large part
-            MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, last_comm);
+            MPI_Send(local_array, size_s, MPI_INT, group_rank - half_size, 1, last_comm);
             kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array + ip, size_k * sizeof(int));
         }
