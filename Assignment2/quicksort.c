@@ -161,7 +161,7 @@ int main(int argc, char *argv[])
                 int *ps = NULL; // array to store medians
                 ps = (int *)malloc(group_size * sizeof(int));
                 ps[0] = p;
-                for (int i = 1; i < size; i++)
+                for (int i = 1; i < group_size; i++)
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
@@ -183,7 +183,7 @@ int main(int argc, char *argv[])
                 int *ps = NULL; // array to store medians
                 ps = (int *)malloc(group_size * sizeof(int));
                 ps[0] = p;
-                for (int i = 1; i < size; i++)
+                for (int i = 1; i < group_size; i++)
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
