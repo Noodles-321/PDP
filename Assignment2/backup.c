@@ -4,19 +4,7 @@
 #include <math.h>
 #include <string.h>
 #define MASTER 0 /* task ID of master task */
-int log_base2(int x){
-    int res = 0;
-    while(x > 1){
-      x /= 2;
-      res++;
-    }
-    return res;
-}
 
-void array_copy(int ori[], int aim[], int size){
-    for(int i = 0; i < size; i++)
-       aim[i] = ori[i];
-}
 int partion(int R[], int start, int end)
 {
     int r = R[start];
@@ -173,7 +161,7 @@ int main(int argc, char *argv[])
                 int *ps = NULL; // array to store medians
                 ps = (int *)malloc(group_size * sizeof(int));
                 ps[0] = p;
-                for (int i = 1; i < group_size; i++)
+                for (int i = 1; i < size; i++)
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
@@ -195,7 +183,7 @@ int main(int argc, char *argv[])
                 int *ps = NULL; // array to store medians
                 ps = (int *)malloc(group_size * sizeof(int));
                 ps[0] = p;
-                for (int i = 1; i < group_size; i++)
+                for (int i = 1; i < size; i++)
                 {
                     MPI_Recv(ps + i, 1, MPI_INT, i, 111, last_comm, &status);
                 }
@@ -216,8 +204,8 @@ int main(int argc, char *argv[])
         while (p > local_array[ip] && ip < size_l)
             ip++;
         // ip is the index of the first number in each process larger than the pivot
-        int half_size = group_size / 2;
-        int color = group_rank / half_size;
+
+        int color = group_rank % 2;
         int size_s, size_k, size_r;
         int *kept = NULL;
         int *received = NULL;
@@ -227,14 +215,14 @@ int main(int argc, char *argv[])
             size_s = size_l - ip;
             size_k = ip;
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Send(&size_s, 1, MPI_INT, group_rank + half_size, 0, last_comm);
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank + half_size, 0, last_comm, &status);
+            MPI_Send(&size_s, 1, MPI_INT, group_rank + 1, 0, last_comm);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank + 1, 0, last_comm, &status);
             received = (int *)malloc(size_r * sizeof(int));
             // send out the right large part, keep the left small part
-            MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + half_size, 1, last_comm);
+            MPI_Send(local_array + ip, size_s, MPI_INT, group_rank + 1, 1, last_comm);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
             // receive the small part
-            MPI_Recv(received, size_r, MPI_INT, group_rank + half_size, 1, last_comm, &status);
+            MPI_Recv(received, size_r, MPI_INT, group_rank + 1, 1, last_comm, &status);
             kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array, size_k * sizeof(int));
         }
@@ -244,14 +232,14 @@ int main(int argc, char *argv[])
             size_k = size_l - ip;
 
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Recv(&size_r, 1, MPI_INT, group_rank - half_size, 0, last_comm, &status);
-            MPI_Send(&size_s, 1, MPI_INT, group_rank - half_size, 0, last_comm);
+            MPI_Recv(&size_r, 1, MPI_INT, group_rank - 1, 0, last_comm, &status);
+            MPI_Send(&size_s, 1, MPI_INT, group_rank - 1, 0, last_comm);
             received = (int *)malloc(size_r * sizeof(int));
             // receive the large part
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
-            MPI_Recv(received, size_r, MPI_INT, group_rank - half_size, 1, last_comm, &status);
+            MPI_Recv(received, size_r, MPI_INT, group_rank - 1, 1, last_comm, &status);
             // send out the left small part, keep the right large part
-            MPI_Send(local_array, size_s, MPI_INT, group_rank - half_size, 1, last_comm);
+            MPI_Send(local_array, size_s, MPI_INT, group_rank - 1, 1, last_comm);
             kept = (int *)malloc(size_k * sizeof(int));
             memcpy(kept, local_array + ip, size_k * sizeof(int));
         }
@@ -259,9 +247,9 @@ int main(int argc, char *argv[])
         // 更新局部数组
         free(local_array);
         size_l = size_k + size_r; // local array size
-        local_array = NULL;
-        local_array = (int *)malloc(size_l * sizeof(int));
-        merge_arrays(kept, size_k, received, size_r, local_array);
+        // int *local_array_new;
+        local_array_new = (int *)malloc(size_l * sizeof(int));
+        merge_arrays(kept, size_k, received, size_r, local_array_new);
 
         free(received);
         free(kept);
@@ -280,16 +268,20 @@ int main(int argc, char *argv[])
     if (rank != MASTER)
     {
         MPI_Send(&size_l, 1, MPI_INT, MASTER, 999, MPI_COMM_WORLD);
-        MPI_Send(local_array, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
+        MPI_Send(local_array_new, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
     }
     else
     {
         free(data);
-        data = NULL;
-        data = (int *)malloc(n * sizeof(int));
-        memcpy(data, local_array, size_l * sizeof(int));
+        int *data = (int *)malloc(n * sizeof(int));
+        if (size == 1)
+            memcpy(data, local_array, size_l * sizeof(int));
+        else
+            memcpy(data, local_array_new, size_l * sizeof(int));
+
         int *local_array_sizes = NULL;
         local_array_sizes = (int *)malloc(size * sizeof(int));
+        int cum_size = size_l;
 
         for (int i = 1; i < size; i++)
         {
@@ -306,7 +298,7 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f\n", t_end - t_begin);
-        /*
+
         for (int i = 0; i < n - 1; i++)
         {
             if (data[i] > data[i + 1])
@@ -315,7 +307,7 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-        */
+
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
@@ -329,7 +321,8 @@ int main(int argc, char *argv[])
 
         fclose(fp);
     }
-    free(local_array);
+
+    free(local_array_new);
     free(data);
     MPI_Finalize(); /* Shut down and clean up MPI */
 
