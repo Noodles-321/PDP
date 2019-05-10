@@ -13,6 +13,10 @@ int log_base2(int x){
     return res;
 }
 
+void array_copy(int ori[], int aim[], int size){
+    for(int i = 0; i < size; i++)
+       aim[i] = ori[i];
+}
 int partion(int R[], int start, int end)
 {
     int r = R[start];
@@ -255,9 +259,9 @@ int main(int argc, char *argv[])
         // 更新局部数组
         free(local_array);
         size_l = size_k + size_r; // local array size
-        // int *local_array_new;
-        local_array_new = (int *)malloc(size_l * sizeof(int));
-        merge_arrays(kept, size_k, received, size_r, local_array_new);
+        local_array = NULL;
+        local_array = (int *)malloc(size_l * sizeof(int));
+        merge_arrays(kept, size_k, received, size_r, local_array);
 
         free(received);
         free(kept);
@@ -276,20 +280,16 @@ int main(int argc, char *argv[])
     if (rank != MASTER)
     {
         MPI_Send(&size_l, 1, MPI_INT, MASTER, 999, MPI_COMM_WORLD);
-        MPI_Send(local_array_new, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
+        MPI_Send(local_array, size_l, MPI_INT, MASTER, 666, MPI_COMM_WORLD);
     }
     else
     {
         free(data);
-        int *data = (int *)malloc(n * sizeof(int));
-        if (size == 1)
-            memcpy(data, local_array, size_l * sizeof(int));
-        else
-            memcpy(data, local_array_new, size_l * sizeof(int));
-
+        data = NULL;
+        data = (int *)malloc(n * sizeof(int));
+        memcpy(data, local_array, size_l * sizeof(int));
         int *local_array_sizes = NULL;
         local_array_sizes = (int *)malloc(size * sizeof(int));
-        int cum_size = size_l;
 
         for (int i = 1; i < size; i++)
         {
@@ -306,7 +306,7 @@ int main(int argc, char *argv[])
     if (rank == MASTER)
     {
         printf("%.2f\n", t_end - t_begin);
-
+        /*
         for (int i = 0; i < n - 1; i++)
         {
             if (data[i] > data[i + 1])
@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
                 break;
             }
         }
-
+        */
         FILE *fp = fopen(output_file_name, "a");
         if (fp == NULL)
         {
@@ -329,8 +329,7 @@ int main(int argc, char *argv[])
 
         fclose(fp);
     }
-
-    free(local_array_new);
+    free(local_array);
     free(data);
     MPI_Finalize(); /* Shut down and clean up MPI */
 
