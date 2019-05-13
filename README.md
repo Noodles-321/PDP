@@ -3,7 +3,7 @@
 - [x] 数组拼接
 - [x] pivot selection
 - [x] 测试
-- [ ] 报告
+- [x] 报告
 
 ## Reference
 
