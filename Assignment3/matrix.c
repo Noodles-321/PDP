@@ -94,34 +94,46 @@ int main(int argc, char *argv[])
     */   
     free(A);
     free(B);
-    float *buffer_C;
-    left = (rank - 1) % size;
-    right = (rank + 1) % size;
-    buffer_C = (float *)malloc(chunk * n * sizeof(float));
+    //float *buffer_C;
+    int left = (rank - 1) % size;
+    int right = (rank + 1) % size;
+    int row_bias = chunk * rank;
+    int col_bias = chunk * rank;
+    res = (float *)malloc(n * n * sizeof(float));
+    //buffer_C = (float *)malloc(chunk * n * sizeof(float));
     for(int i = 0; i < size; i++){
+       if(i > 0){
+         col_bias = ((left + 1) % size) * chunk;
+       }
        for(int row = 0; row < chunk; row++){
            for(int col = 0; col < chunk; col++){
                int sum = 0;
                for(int k = 0; k < n; k++){
                  sum += buffer_A[row * n + k] * buffer_B[col * n + k];
                }
-               buffer_C[row * n + col] = sum;
+               res[(row + row_bias) * n + (col + col_bias)] = sum;
            }
        }
-       if(i != size - 1)
-           MPI_Send();
-       if(i != size - 1)
-           MPI_Recv();
+       if(i != size - 1){
+           // MPI_Send(buf, count, datatype, dest, tag, comm)
+           MPI_Send(buffer_B, chunk * n, MPI_FLOAT, right, 666, MPI_COMM_WORLD);
+           MPI_Send(&col_bias, 1, MPI_INT, right, 999, MPI_COMM_WORLD); 
+       }       
+       if(i != size - 1){
+           // MPI_Recv(buf, count, datatype, source, tag, comm, status)
+           MPI_Recv(buffer_B, chunk * n, MPI_FLOAT, left, 666, MPI_COMM_WORLD, &status);
+           MPI_Recv(&col_bias, 1, MPI_INT, left, 999, MPI_COMM_WORLD, &status);
+       }
+       right = (right + 1) % size;
+       left = (left - 1) % size;
     } 
-        
-    //memcpy(local_array, data + istart, size_l * sizeof(int));
-
-
-            // MPI_Send(buf, count, datatype, dest, tag, comm)
-            // MPI_Recv(buf, count, datatype, source, tag, comm, status)
-
-
+    MPI_Gather(res, chunk * n, MPI_FLOAT, res, chunk * n, MPI_FLOAT, MASTER, MPI_COMM_WORLD);       
     t_end = MPI_Wtime();
+    if(rank = MASTER){
+       for(int i = 0; i < n * n; i++)
+         printf("%f\n", res[i]);
+    }
+
     /*
     // Write data to file
     if (rank == MASTER)
