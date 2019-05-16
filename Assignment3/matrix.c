@@ -23,10 +23,9 @@ int main(int argc, char *argv[])
     char *output_file_name = argv[2];
 
     int n, rank, size;
-    int *A = NULL, *B = NULL, *res = NULL;
-    int *buffer_A = NULL, *buffer_B = NULL;
+    float *A = NULL, *B = NULL, *res = NULL;
+    float *buffer_A = NULL, *buffer_B = NULL;
     int chunk;             /* This many iterations will I do */
-    int i, istart, istop;  /* Variables for the local loop   */
     double t_begin, t_end; //, time, t_total;
     // MPI_Status status;
 
@@ -53,43 +52,68 @@ int main(int argc, char *argv[])
           printf("N can't be divied by number of processors!");
           exit(1);
         }
-        A = (int *)malloc(n * n * sizeof(int));
-        B = (int *)malloc(n * n * sizeof(int));
+        A = (float *)malloc(n * n * sizeof(float));
+        B = (float *)malloc(n * n * sizeof(float));
+        //read A by rows
         for (int i = 0; i < n * n; i++){
-            fscanf(f, "%d", &A[i]);
-            //printf("%d\n", A[i]);
+            fscanf(f, "%f", &A[i]);
+            //printf("%f\n", A[i]);
         }
-        for (int i = 0; i < n * n; i++){
-            fscanf(f, "%d", &B[i]);
-            //printf("%d\n", B[i]);
+        //read B by cols
+        for (int i = 0; i < n; i++){
+            for(int j = 0; j < n; j++){
+              fscanf(f, "%f", &B[j * n + i]);
+              //printf("%f\n", B[i]);
+            }
         }
         fclose(f);
     }
-    MPI_Bcast(&n, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
+    //IO finish, time begins
     t_begin = MPI_Wtime();
+  
+    MPI_Bcast(&n, 1, MPI_INT, MASTER, MPI_COMM_WORLD);
     // broadcast to other processes
     chunk = n / size;               /* Number of numbers per processor */
-    //istart = rank * chunk;          /* Calculate start and stop indices  */
-    //istop = (rank + 1) * chunk - 1; /* for the local loop                */
-    buffer_A = (int *)malloc(chunk * n * sizeof(int));
-    buffer_B = (int *)malloc(chunk * n * sizeof(int));
+    buffer_A = (float *)malloc(chunk * n * sizeof(float));
+    buffer_B = (float *)malloc(chunk * n * sizeof(float));
     //int MPI_Scatter(void* sendbuf, int sendcount, MPI_Datatype sendtype,
     //                void* recvbuf, int recvcount, MPI_Datatype recvtype,
     //                                int root, MPI_Comm comm)
     
     // partition by ROW
-    MPI_Scatter(A, chunk * n, MPI_INT, buffer_A, chunk * n, MPI_INT, MASTER, MPI_COMM_WORLD);
-    MPI_Scatter(B, chunk * n, MPI_INT, buffer_B, chunk * n, MPI_INT, MASTER, MPI_COMM_WORLD);
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Scatter(A, chunk * n, MPI_FLOAT, buffer_A, chunk * n, MPI_FLOAT, MASTER, MPI_COMM_WORLD);
+    MPI_Scatter(B, chunk * n, MPI_FLOAT, buffer_B, chunk * n, MPI_FLOAT, MASTER, MPI_COMM_WORLD);
+    /* 
     for(int i = 0; i < size; i++){
       if(rank == i){
         for(int j = 0; j < chunk * n; j++){
-          printf("%d and %d from %d\n", buffer_A[j], buffer_B[j], rank);
+          printf("%f and %f from %d\n", buffer_A[j], buffer_B[j], rank);
         }
       }
-    }    
+    } 
+    */   
     free(A);
     free(B);
+    float *buffer_C;
+    left = (rank - 1) % size;
+    right = (rank + 1) % size;
+    buffer_C = (float *)malloc(chunk * n * sizeof(float));
+    for(int i = 0; i < size; i++){
+       for(int row = 0; row < chunk; row++){
+           for(int col = 0; col < chunk; col++){
+               int sum = 0;
+               for(int k = 0; k < n; k++){
+                 sum += buffer_A[row * n + k] * buffer_B[col * n + k];
+               }
+               buffer_C[row * n + col] = sum;
+           }
+       }
+       if(i != size - 1)
+           MPI_Send();
+       if(i != size - 1)
+           MPI_Recv();
+    } 
+        
     //memcpy(local_array, data + istart, size_l * sizeof(int));
 
 
