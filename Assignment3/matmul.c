@@ -24,12 +24,12 @@ int main(int argc, char *argv[])
     // MPI_Status status;
 
     MPI_Init(&argc, &argv); /* Initialize MPI */
-    MPI_Status status[40];
-    MPI_Request req[40];
+    MPI_Status status;
+    MPI_Request req;
     MPI_Comm_size(MPI_COMM_WORLD, &size); /* Get the number of processors */
     MPI_Comm_rank(MPI_COMM_WORLD, &rank); /* Get my rank                  */
-    // Read data from file
-    // read in process 0
+
+    // Read data from file in process 0
     if (rank == MASTER)
     {
         FILE *f;
@@ -46,14 +46,17 @@ int main(int argc, char *argv[])
             printf("N can't be divied by number of processors!");
             exit(1);
         }
+
         A = (double *)malloc(n * n * sizeof(double));
         B = (double *)malloc(n * n * sizeof(double));
+
         //read A by rows
         for (int i = 0; i < n * n; i++)
         {
             fscanf(f, "%lf", &A[i]);
             //printf("%f\n", A[i]);
         }
+
         //read B by cols
         for (int i = 0; i < n; i++)
         {
@@ -63,8 +66,10 @@ int main(int argc, char *argv[])
                 //printf("%f\n", B[i]);
             }
         }
+
         fclose(f);
     }
+
     //IO finish, time begins
     t_begin = MPI_Wtime();
 
@@ -73,11 +78,11 @@ int main(int argc, char *argv[])
     chunk = n / size; /* Number of numbers per processor */
     buffer_A = (double *)malloc(chunk * n * sizeof(double));
     buffer_B = (double *)malloc(chunk * n * sizeof(double));
+
+    // partition by ROW
     //int MPI_Scatter(void* sendbuf, int sendcount, MPI_Datatype sendtype,
     //                void* recvbuf, int recvcount, MPI_Datatype recvtype,
     //                                int root, MPI_Comm comm)
-
-    // partition by ROW
     MPI_Scatter(A, chunk * n, MPI_DOUBLE, buffer_A, chunk * n, MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
     MPI_Scatter(B, chunk * n, MPI_DOUBLE, buffer_B, chunk * n, MPI_DOUBLE, MASTER, MPI_COMM_WORLD);
     /* 
@@ -120,11 +125,11 @@ int main(int argc, char *argv[])
         if (i != size - 1)
         {
             // MPI_Send(buf, count, datatype, dest, tag, comm)
-            MPI_Isend(buffer_B, chunk * n, MPI_DOUBLE, right, 666, MPI_COMM_WORLD, &req[rank]);
-            MPI_Isend(&col_bias, 1, MPI_INT, right, 999, MPI_COMM_WORLD, &req[rank]);
+            MPI_Isend(buffer_B, chunk * n, MPI_DOUBLE, right, 666, MPI_COMM_WORLD, &req);
+            MPI_Isend(&col_bias, 1, MPI_INT, right, 999, MPI_COMM_WORLD, &req);
             // MPI_Recv(buf, count, datatype, source, tag, comm, status)
-            MPI_Recv(buffer_tmp, chunk * n, MPI_DOUBLE, left, 666, MPI_COMM_WORLD, &status[rank]);
-            MPI_Recv(&col_bias, 1, MPI_INT, left, 999, MPI_COMM_WORLD, &status[rank]);
+            MPI_Recv(buffer_tmp, chunk * n, MPI_DOUBLE, left, 666, MPI_COMM_WORLD, &status);
+            MPI_Recv(&col_bias, 1, MPI_INT, left, 999, MPI_COMM_WORLD, &status);
         }
         right = (right + 1) % size;
         left = ((left - 1) % size + size) % size;
@@ -158,7 +163,14 @@ int main(int argc, char *argv[])
             }
         }
         fclose(fp);
+
+        free(fin_res);
     }
+
+    free(buffer_A);
+    free(buffer_B);
+    free(buffer_tmp);
+    free(res);
 
     MPI_Finalize(); /* Shut down and clean up MPI */
 
