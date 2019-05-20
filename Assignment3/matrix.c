@@ -24,7 +24,7 @@ int main(int argc, char *argv[])
 
     int n, rank, size;
     double *A = NULL, *B = NULL, *res = NULL;
-    double *buffer_A = NULL, *buffer_B = NULL;
+    double *buffer_A = NULL, *buffer_B = NULL, *buffer_tmp = NULL;
     int chunk;             /* This many iterations will I do */
     double t_begin, t_end; //, time, t_total;
     // MPI_Status status;
@@ -94,6 +94,8 @@ int main(int argc, char *argv[])
     free(A);
     free(B);
     //double *buffer_C;
+    buffer_tmp = (double *)malloc(chunk * n * sizeof(double));
+    memcpy(buffer_tmp, buffer_B, chunk * n * sizeof(double));
     int left = ((rank - 1) % size + size) % size;
     int right = (rank + 1) % size;
     int col_bias = chunk * rank;
@@ -107,7 +109,7 @@ int main(int argc, char *argv[])
            for(int col = 0; col < chunk; col++){
                int sum = 0;
                for(int k = 0; k < n; k++){
-                 sum += buffer_A[row * n + k] * buffer_B[col * n + k];
+                 sum += buffer_A[row * n + k] * buffer_tmp[col * n + k];
                }
                res[row * n + (col + col_bias)] = sum;
            }
@@ -117,7 +119,7 @@ int main(int argc, char *argv[])
            MPI_Isend(buffer_B, chunk * n, MPI_DOUBLE, right, 666, MPI_COMM_WORLD, &req[rank]);
            MPI_Isend(&col_bias, 1, MPI_INT, right, 999, MPI_COMM_WORLD, &req[rank]);       
            // MPI_Recv(buf, count, datatype, source, tag, comm, status)
-           MPI_Recv(buffer_B, chunk * n, MPI_DOUBLE, left, 666, MPI_COMM_WORLD, &status[rank]);
+           MPI_Recv(buffer_tmp, chunk * n, MPI_DOUBLE, left, 666, MPI_COMM_WORLD, &status[rank]);
            MPI_Recv(&col_bias, 1, MPI_INT, left, 999, MPI_COMM_WORLD, &status[rank]);
        }
        right = (right + 1) % size;
