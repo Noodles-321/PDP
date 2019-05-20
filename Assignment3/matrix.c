@@ -107,7 +107,7 @@ int main(int argc, char *argv[])
        }
        for(int row = 0; row < chunk; row++){
            for(int col = 0; col < chunk; col++){
-               int sum = 0;
+               double sum = 0.0;
                for(int k = 0; k < n; k++){
                  sum += buffer_A[row * n + k] * buffer_tmp[col * n + k];
                }
